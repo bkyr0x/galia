@@ -1,0 +1,55 @@
+const EXPLAIN={
+ 'ApoB':[`ApoB rodo, kiek kraujyje yra dalelių, kurios gali kauptis kraujagyslių sienelėse. Tai tikslesnis širdies rizikos rodiklis nei vien MTL cholesterolis, bet įprastuose paketuose jis matuojamas retai.`,`ApoB counts the particles that can lodge in artery walls. It predicts heart risk better than LDL alone, yet standard panels rarely measure it.`],
+ 'MTL cholesterolis':[`„Blogasis“ cholesterolis. Kai jo ilgai per daug, didėja aterosklerozės rizika.`,`The “bad” cholesterol. Too much of it for years raises the risk of atherosclerosis.`],
+ 'Vitaminas D':[`Svarbus kaulams, raumenims ir imunitetui. Lietuvoje jo trūksta daugeliui, ypač rudenį ir žiemą.`,`Important for bones, muscles and immunity. Many people in Lithuania run low, especially in autumn and winter.`],
+ 'Omega-3 indeksas':[`Rodo, kiek omega-3 (EPA ir DHA) yra raudonųjų kraujo kūnelių membranose. Žemas indeksas siejamas su didesne širdies rizika.`,`Shows how much omega-3 (EPA and DHA) is in your red blood cell membranes. A low index is linked to higher heart risk.`],
+ 'AA/EPA santykis':[`Arachidono rūgšties ir EPA santykis atspindi uždegiminį foną. Kuo mažesnis, tuo geriau.`,`The arachidonic acid to EPA ratio reflects background inflammation. Lower is better.`],
+ 'Homocisteinas':[`Aminorūgštis, kurios perteklius gali žaloti kraujagysles. Ją mažina B grupės vitaminai.`,`An amino acid that can damage blood vessels in excess. B vitamins bring it down.`],
+ 'Bendras cholesterolis':[`Visų cholesterolio frakcijų suma. Vertinama kartu su ApoB, MTL ir DTL.`,`The sum of all cholesterol fractions. Read it together with ApoB, LDL and HDL.`],
+ 'Trigliceridai':[`Kraujo riebalai, kurie didėja nuo saldumynų, alkoholio ir mažo judėjimo.`,`Blood fats that rise with sugar, alcohol and too little movement.`],
+ 'Ne-DTL cholesterolis':[`Visas „blogasis“ cholesterolis kartu. Gerai papildo MTL rodiklį.`,`All the “bad” cholesterol together. A useful companion to LDL.`],
+ 'Gliukozė':[`Cukraus kiekis kraujyje nevalgius. Rodo, kaip organizmas tvarkosi su angliavandeniais.`,`Fasting blood sugar. Shows how well your body handles carbohydrates.`],
+ 'Anti-TG':[`Antikūnai prieš skydliaukės baltymą. Nedidelis padidėjimas dažnai nieko nereiškia, bet verta stebėti.`,`Antibodies against a thyroid protein. A small rise often means nothing, but it's worth watching.`],
+ 'TSH':[`Pagrindinis skydliaukės veiklos rodiklis.`,`The main marker of thyroid function.`],
+ 'hs-CRB':[`Jautrus uždegimo žymuo. Žemas lygis reiškia mažą sisteminį uždegimą.`,`A sensitive inflammation marker. Low means little systemic inflammation.`],
+ 'Hemoglobinas':[`Baltymas, pernešantis deguonį. Rodo, ar nėra mažakraujystės.`,`The protein that carries oxygen. Shows whether there's anemia.`],
+ 'Feritinas':[`Geležies atsargos organizme.`,`Your body's iron stores.`],
+};
+const TEMPL={
+ sirdis:{lt:[`Širdies ir kraujagyslių sveikata`,`Kai kurie lipidų rodikliai virš optimalios zonos – tai ilgainiui didina aterosklerozės riziką.`,[`30 min. ramaus bėgimo ar greito ėjimo 5× per savaitę`,`Riebi žuvis 2× per savaitę`,`Daugiau skaidulų: avižos, ankštiniai, daržovės`,`Mažiau sočiųjų riebalų ir perdirbtos mėsos`]],en:[`Optimize cardiovascular health`,`Some lipid markers sit above the optimal zone, which raises atherosclerosis risk over time.`,[`30 min of easy running or brisk walking 5× a week`,`Oily fish twice a week`,`More fibre: oats, legumes, vegetables`,`Less saturated fat and processed meat`]],c:`var(--accent)`,bg:`#FCEDEB`},
+ apykaita:{lt:[`Medžiagų apykaita`,`Cukraus ar homocisteino rodikliai ne optimalūs.`,[`10 min. pasivaikščiojimas po kiekvieno valgio`,`Mažiau saldžių gėrimų ir užkandžių`,`B grupės vitaminų turintis maistas`]],en:[`Improve metabolic health`,`Sugar or homocysteine markers are not optimal.`,[`10-minute walk after each meal`,`Fewer sugary drinks and snacks`,`Foods rich in B vitamins`]],c:`var(--accent2)`,bg:`#FCF0E7`},
+ vitaminai:{lt:[`Vitaminai ir mineralai`,`Kai kurių vitaminų ar mineralų trūksta.`,[`Vitaminas D3 + K2 kasdien su riebiu maistu (dozę patvirtina gydytojas)`,`15–20 min. dienos šviesos lauke`,`Pasitikrinti po 3 mėnesių`]],en:[`Fix nutrient gaps`,`Some vitamins or minerals are low.`,[`Vitamin D3 + K2 daily with a fatty meal (dose set by your doctor)`,`15–20 min of daylight outdoors`,`Recheck in 3 months`]],c:`var(--blue)`,bg:`#EBF1FC`},
+ skydliauke:{lt:[`Skydliaukė`,`Nedideli nukrypimai – verta stebėti.`,[`Pakartoti skydliaukės tyrimus po 6 mėn.`,`Atkreipti dėmesį į nuovargį, šalčio jautrumą`]],en:[`Thyroid`,`Small deviations worth watching.`,[`Repeat thyroid tests in 6 months`,`Watch for fatigue or feeling cold`]],c:`#8A5BD6`,bg:`#F1ECFB`},
+ uzdegimas:{lt:[`Uždegimas ir imunitetas`,`Uždegimo žymenys padidėję.`,[`Miegas 7–8 val.`,`Daugiau daržovių ir omega-3`,`Pasitikrinti po 6 savaičių`]],en:[`Lower inflammation`,`Inflammation markers are elevated.`,[`Sleep 7–8 hours`,`More vegetables and omega-3`,`Recheck in 6 weeks`]],c:`#C2410C`,bg:`#FDEEE3`},
+ kepenys:{lt:[`Kepenų sveikata`,`Kepenų fermentai ne optimalūs.`,[`Mažiau alkoholio`,`Mažiau fruktozės ir perdirbto maisto`]],en:[`Liver health`,`Liver enzymes are not optimal.`,[`Less alcohol`,`Less fructose and processed food`]],c:`#0F766E`,bg:`#E3F4F1`},
+ inkstai:{lt:[`Inkstų sveikata`,`Inkstų rodikliai verti dėmesio.`,[`Pakankamai vandens`,`Aptarti su gydytoju`]],en:[`Kidney health`,`Kidney markers need attention.`,[`Drink enough water`,`Discuss with a doctor`]],c:`#0E7490`,bg:`#E2F3F7`},
+ hormonai:{lt:[`Hormonų pusiausvyra`,`Kai kurie hormonai ne optimalūs.`,[`Reguliarus jėgos treniruotės`,`Miego režimas`]],en:[`Hormone balance`,`Some hormones are not optimal.`,[`Regular strength training`,`Consistent sleep schedule`]],c:`#9D174D`,bg:`#FBE7F0`},
+ kraujas:{lt:[`Kraujas ir geležis`,`Kraujo ar geležies rodikliai ne optimalūs.`,[`Aptarti su gydytoju geležies papildus`,`Geležies turintis maistas su vitaminu C`]],en:[`Blood & iron`,`Blood or iron markers are not optimal.`,[`Discuss iron with a doctor`,`Iron-rich foods with vitamin C`]],c:`#B91C1C`,bg:`#FCE8E8`},
+ elektrolitai:{lt:[`Elektrolitai`,`Elektrolitų balansas ne optimalus.`,[`Pakankamai skysčių`,`Aptarti su gydytoju`]],en:[`Electrolytes`,`Electrolyte balance is not optimal.`,[`Enough fluids`,`Discuss with a doctor`]],c:`#475569`,bg:`#EEF1F5`},
+ other:{lt:[`Kiti rodikliai`,`Įkeltame tyrime yra rodiklių už normos ribų.`,[`Aptarti su GALIA gydytoju`]],en:[`Other markers`,`Your upload has values outside the lab range.`,[`Discuss with a GALIA doctor`]],c:`#475569`,bg:`#EEF1F5`},
+};
+// sample lab report (as a typical Lithuanian lab prints it; some in mmol/L to show unit conversion)
+const SAMPLE_REPORT={date:`2025-11-04`,lab:`Laboratorinių tyrimų atsakymas`,patient:`Tomas K., 1985`,rows:[
+ [`Cholesterolis (bendras)`,`4,86`,`mmol/L`,`3,1–5,2`,`Bendras cholesterolis`,188],
+ [`MTL cholesterolis`,`2,69`,`mmol/L`,`<2,6`,`MTL cholesterolis`,104],
+ [`DTL cholesterolis`,`1,32`,`mmol/L`,`>1,0`,`DTL cholesterolis`,51],
+ [`Trigliceridai`,`1,36`,`mmol/L`,`<1,7`,`Trigliceridai`,120],
+ [`Apolipoproteinas B`,`0,88`,`g/L`,`0,6–1,2`,`ApoB`,88],
+ [`Gliukozė (nevalgius)`,`5,2`,`mmol/L`,`3,9–5,5`,`Gliukozė`,94],
+ [`25-OH vitaminas D`,`60`,`nmol/L`,`75–250`,`Vitaminas D`,24],
+ [`TSH`,`2,0`,`mIU/L`,`0,4–4,0`,`TSH`,2.0],
+ [`ALT`,`26`,`U/L`,`<45`,`ALT`,26],
+ [`Hemoglobinas`,`150`,`g/L`,`135–175`,`Hemoglobinas`,15.0],
+ [`Feritinas`,`92`,`µg/L`,`30–400`,`Feritinas`,92],
+]};
+const ICONS={
+ dash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>',
+ markers:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+ upload:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>',
+ plan:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
+ ai:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-11.8 7L4 20l1.1-4.6A8 8 0 1 1 21 12z"/></svg>',
+ emp:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+ set:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+ home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
+};
+const LOGO=(s=34,id="")=>`<svg width="${s}" height="${s}" viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="lg${s}${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF4A2F"/><stop offset="1" stop-color="#FF8A3D"/></linearGradient></defs><rect width="100" height="100" rx="28" fill="url(#lg${s}${id})"/><path d="M14 54 L34 54 L41 40 L49 70 L58 26 L65 54 L86 54" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
