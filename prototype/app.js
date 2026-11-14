@@ -1,0 +1,432 @@
+const CATS = {
+  sirdis:["Širdis ir kraujagyslės","heart"], apykaita:["Medžiagų apykaita","meta"], hormonai:["Hormonai","horm"],
+  skydliauke:["Skydliaukė","thy"], uzdegimas:["Uždegimas ir imunitetas","inf"], kepenys:["Kepenys","liv"],
+  inkstai:["Inkstai","kid"], vitaminai:["Vitaminai ir mineralai","vit"], kraujas:["Kraujas ir geležis","blood"], elektrolitai:["Elektrolitai","el"]
+};
+const EXPLAIN = {
+  "ApoB":"ApoB rodo, kiek kraujyje yra dalelių, kurios gali kauptis kraujagyslių sienelėse. Tai tikslesnis širdies rizikos rodiklis nei vien MTL cholesterolis, bet įprastuose tyrimų paketuose jis matuojamas retai.",
+  "MTL cholesterolis":"Vadinamasis „blogasis“ cholesterolis. Kai jo ilgai per daug, didėja aterosklerozės rizika.",
+  "Vitaminas D":"Vitaminas D svarbus kaulams, raumenims ir imunitetui. Lietuvoje jo trūksta daugeliui žmonių, ypač rudenį ir žiemą.",
+  "Omega-3 indeksas":"Rodo, kiek omega-3 riebalų rūgščių (EPA ir DHA) yra raudonųjų kraujo kūnelių membranose. Žemas indeksas siejamas su didesne širdies rizika.",
+  "AA/EPA santykis":"Arachidono rūgšties ir EPA santykis atspindi uždegiminį foną organizme. Kuo jis mažesnis, tuo geriau.",
+  "Homocisteinas":"Aminorūgštis, kurios perteklius gali žaloti kraujagysles. Ją mažina B grupės vitaminai.",
+  "Bendras cholesterolis":"Visų cholesterolio frakcijų suma. Vertinama kartu su ApoB, MTL ir DTL.",
+  "Trigliceridai":"Kraujo riebalai, kurie didėja nuo saldumynų, alkoholio ir mažo judėjimo.",
+  "Ne-DTL cholesterolis":"Visas „blogasis“ cholesterolis kartu. Gerai papildo MTL rodiklį.",
+  "Gliukozė":"Cukraus kiekis kraujyje nevalgius. Rodo, kaip organizmas tvarkosi su angliavandeniais.",
+  "Anti-TG":"Antikūnai prieš skydliaukės baltymą. Nedidelis padidėjimas dažnai nieko nereiškia, bet verta stebėti.",
+  "TSH":"Skydliaukę stimuliuojantis hormonas. Pagrindinis skydliaukės veiklos rodiklis.",
+  "Testosteronas":"Pagrindinis vyriškas hormonas. Svarbus energijai, raumenims ir nuotaikai.",
+  "hs-CRB":"Jautrus uždegimo žymuo. Žemas lygis reiškia mažą sisteminį uždegimą."
+};
+const ACTION = {
+  sirdis:"1 prioritetas plane: daugiau skaidulų ir riebios žuvies, mažiau sočiųjų riebalų, 150 min. aerobinio krūvio per savaitę. Pakartotinis tyrimas po 3 mėn.",
+  vit:"3 prioritetas plane: vitaminas D3 + K2 kasdien, dozę patvirtino gydytojas. Pasitikrinsime po 3 mėn.",
+  meta:"2 prioritetas plane: mažiau greitųjų angliavandenių, 10 min. pasivaikščiojimas po valgio.",
+  thy:"Stebėsime per kitą tyrimą. Jei atsiras simptomų – pasikalbėk su gydytoju."
+};
+const SCORE = {before:87, after:91}, BIO = {before:44, after:38}, AGE = 41;
+
+let S = {
+  screen:"offer", plan:"genome", lab:0, day:1, slot:"08:30", ready:false, after:false,
+  filter:"all", marker:null, openCats:{sirdis:true, vitaminai:true}, prevScreen:"results",
+  todo:{omega:false, d3:false, run:false}, openPrio:0,
+  wear:{apple:true, oura:false, whoop:false, garmin:false}, lang:"LT",
+  chat:[{r:"ai", t:"Labas, Tomai! Aš GALIA asistentas. Mačiau tavo naujausius rezultatus. Klausk bet ko apie juos – lietuviškai."}],
+  busy:false, uploaded:false, modal:null, upload:{state:"idle", rows:[]}
+};
+try { const t = JSON.parse(localStorage.getItem("galia_todo")||"null"); if (t) S.todo = t; } catch(e) {}
+
+const $ = (s)=>document.querySelector(s);
+const esc = (s)=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtN = (v)=> String(v).replace(".",",");
+function markers(){
+  return M.map(m=>{
+    const [name,cat,v0,unit,rl,rh,ol,oh,,prev,after] = m;
+    const v = (S.after && after!=null) ? after : v0;
+    const st = (v<rl||v>rh)?"x":(v<ol||v>oh)?"n":"o";
+    const hist = [];
+    if (prev!=null && S.uploaded) hist.push({d:"2025-11", v:prev});
+    else if (prev!=null && S.after) hist.push({d:"2025-11", v:prev});
+    hist.push({d:"2026-11", v:v0});
+    if (S.after && after!=null) hist.push({d:"2027-05", v:after});
+    return {name,cat,v,unit,rl,rh,ol,oh,st,hist};
+  });
+}
+function counts(ms){ const c={o:0,n:0,x:0}; ms.forEach(m=>c[m.st]++); return c; }
+const STL = {o:"Optimalus", n:"Normalus", x:"Už ribų"};
+const stWord = (m)=> m.st==="x" ? (m.v>m.rh?"Aukštas":"Žemas") : STL[m.st];
+
+const ICON = {
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
+  results:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+  plan:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
+  chat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-11.8 7L4 20l1.1-4.6A8 8 0 1 1 21 12z"/></svg>',
+  profile:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>'
+};
+const LOGO = (s=34)=>`<svg width="${s}" height="${s}" viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="lg${s}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF4A2F"/><stop offset="1" stop-color="#FF8A3D"/></linearGradient></defs><rect width="100" height="100" rx="28" fill="url(#lg${s})"/><path d="M14 54 L34 54 L41 40 L49 70 L58 26 L65 54 L86 54" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+function seg(c,total){
+  const w=(k)=>Math.max(2,(c[k]/total)*100);
+  return `<div class="seg"><span style="flex:${w('o')};background:var(--good)"></span><span style="flex:${w('n')};background:var(--warn)"></span><span style="flex:${w('x')};background:var(--bad)"></span></div>`;
+}
+function grade(ms){ if (ms.some(m=>m.st==="x")) return ["C","x"]; if (ms.some(m=>m.st==="n")) return ["B","n"]; return ["A","o"]; }
+
+// ---------------- screens ----------------
+const FEATURES = [
+ ["100+ rodiklių kraujo tyrimas","Ankstyvieji ligų požymiai"],["Senų tyrimų įkėlimas","Visa istorija vienoje vietoje"],
+ ["Biologinis amžius",""],["Asmeninis planas","Mityba, judėjimas, papildai"],["Išmanieji įrenginiai","Apple Health, Oura, Whoop"],
+ ["DI asistentas","Žino tavo rezultatus"],["Medikų komanda 24/7","Klausk bet kada"],["Papildomi tyrimai","Žarnynas, toksinai, vėžio patikra"],
+ ["Geriausi maisto papildai",""],["Elektroniniai receptai","Per GALIA gydytoją"]
+];
+function vOffer(){
+  return `<div class="fade">
+  <div class="row" style="gap:10px;margin:6px 0 18px">${LOGO(36)}<b style="font-size:22px;letter-spacing:-.5px">GALIA</b></div>
+  <h1>Tavo kraujas. Tavo DNR. Aiškesnis tavęs vaizdas.</h1>
+  <div class="sub">100+ rodiklių vienu kraujo paėmimu, gydytojo planas ir DI asistentas lietuviškai.</div>
+  <div class="card" style="margin-top:18px;text-align:center;padding:20px">
+    <div class="small" style="font-weight:600">Tai, kas galėtų kainuoti <s>3 000 €</s>, dabar –</div>
+    <div style="font-size:54px;font-weight:800;letter-spacing:-2px;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;color:transparent">149 €</div>
+    <div class="small">per metus</div>
+  </div>
+  <h2>Pasirink planą</h2>
+  <div class="stack">
+    <button class="card" data-act="plan:genome" style="text-align:left;outline:${S.plan==='genome'?'2.5px solid var(--ink)':'0'};padding:0;overflow:hidden">
+      <div style="background:var(--ink);color:#fff;font-size:12px;font-weight:700;text-align:center;padding:7px">Pirmiesiems nariams −40 %</div>
+      <div style="padding:14px 16px" class="between"><div><b>Kraujas + genomas</b><div class="small">+ 115 DNR įžvalgų, tepinėlis namuose</div></div><div style="text-align:right"><b style="font-size:22px">249 €</b><div class="small"><s>398 €</s></div></div></div>
+    </button>
+    <button class="card between" data-act="plan:basic" style="text-align:left;outline:${S.plan==='basic'?'2.5px solid var(--ink)':'0'}"><div><b>Tik narystė</b><div class="small">100+ rodiklių, planas, DI ir medikai</div></div><b style="font-size:22px">149 €</b></button>
+  </div>
+  <h2>Narystė apima</h2>
+  <div class="card list">${FEATURES.map(([a,b])=>`<div class="item"><div class="row" style="gap:10px"><span class="check on" style="width:22px;height:22px"></span><b style="font-size:14px">${a}</b></div><span class="small" style="text-align:right">${b}</span></div>`).join("")}</div>
+  <div style="height:16px"></div>
+  <button class="btn grad" data-go="book">Tapti nariu</button>
+  <div class="small" style="text-align:center;margin-top:10px">Atšaukti galima bet kada</div>
+  </div>`;
+}
+const LABS = [["Vilnius","Konstitucijos pr. 7"],["Kaunas","Laisvės al. 53"],["Klaipėda","Taikos pr. 61"]];
+const DAYS = [["Pr","16"],["An","17"],["Tr","18"],["Kt","19"],["Pn","20"]];
+const SLOTS = ["07:30","08:00","08:30","09:00","09:30","10:00"];
+function vBook(){
+  return `<div class="fade">
+  <button class="back" data-go="offer">← Atgal</button>
+  <h1>Užsiregistruok kraujo tyrimui</h1>
+  <div class="sub">Paėmimas trunka ~10 min. Ateik nevalgęs 8–12 val.</div>
+  <h2>Laboratorija</h2>
+  <div class="stack">${LABS.map((l,i)=>`<button class="card between" data-act="lab:${i}" style="text-align:left;outline:${S.lab===i?'2.5px solid var(--ink)':'0'}"><div><b>${l[0]}</b><div class="small">GALIA partnerių laboratorija · ${l[1]}</div></div><span class="check ${S.lab===i?'on':''}"></span></button>`).join("")}</div>
+  <h2>Data</h2>
+  <div class="chips">${DAYS.map((d,i)=>`<button class="chip ${S.day===i?'on':''}" data-act="day:${i}" style="min-width:56px">${d[0]}<br>${d[1]}</button>`).join("")}</div>
+  <h2>Laikas</h2>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${SLOTS.map(t=>`<button class="chip ${S.slot===t?'on':''}" data-act="slot:${t}">${t}</button>`).join("")}</div>
+  <div class="card between" style="margin-top:20px"><span>${S.plan==='genome'?'Kraujas + genomas':'Tik narystė'}</span><b>${S.plan==='genome'?'249 €':'149 €'}/m.</b></div>
+  <div style="height:14px"></div>
+  <button class="btn" data-go="booked">Patvirtinti ir apmokėti</button>
+  </div>`;
+}
+function vBooked(){
+  return `<div class="fade" style="text-align:center;padding-top:30px">
+  <div style="width:84px;height:84px;margin:0 auto 18px;border-radius:99px;background:var(--good);display:flex;align-items:center;justify-content:center"><span class="check on" style="width:60px;height:60px;border:0;scale:1.6"></span></div>
+  <h1>Esi užregistruotas!</h1>
+  <div class="sub">${LABS[S.lab][0]}, ${LABS[S.lab][1]} · lapkričio ${DAYS[S.day][1]} d., ${S.slot}</div>
+  <div class="card" style="text-align:left;margin-top:22px">
+    <b>Prieš tyrimą</b>
+    <div class="stack" style="margin-top:10px;font-size:14px">
+      <div>• Nevalgyk 8–12 val., vanduo – galima</div><div>• Dieną prieš – be alkoholio ir intensyvaus sporto</div><div>• Papildus išgerk po kraujo paėmimo</div>
+    </div>
+  </div>
+  ${S.plan==='genome'?`<div class="card" style="text-align:left;margin-top:10px"><b>DNR rinkinys</b><div class="small">Tepinėlio rinkinį atsiųsime į paštomatą per 2 d.</div></div>`:""}
+  <div style="height:22px"></div>
+  <button class="btn grad" data-act="ready">Demo: praėjo savaitė →</button>
+  </div>`;
+}
+function vHome(){
+  const ms=markers(), c=counts(ms);
+  const sc = S.after?SCORE.after:SCORE.before, ba = S.after?BIO.after:BIO.before;
+  const done = Object.values(S.todo).filter(Boolean).length;
+  return `<div class="fade">
+  <div class="between" style="margin:4px 0 14px"><div><div class="small">Lapkričio 13 d.</div><h1>Labas, Tomai</h1></div>${LOGO(40)}</div>
+  <button class="card" data-go="results" style="width:100%;text-align:left">
+    <div class="between"><b>Tavo rezultatai</b><span class="small">${S.after?'2027-05':'2026-11'} →</span></div>
+    <div class="row" style="gap:18px;margin:10px 0 12px">${[[ms.length,"Iš viso",""],[c.o,"Optimalūs","o"],[c.n,"Normalūs","n"],[c.x,"Už ribų","x"]].map(([v,l,k])=>`<div><div style="font-size:26px;font-weight:700" class="${k}">${v}</div><div class="small">${l}</div></div>`).join("")}</div>
+    ${seg(c,ms.length)}
+  </button>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+    <div class="card"><div class="small" style="font-weight:700;color:var(--ink)">GALIA balas</div><div class="big">${sc}<span class="small"> /100</span></div><div class="small ${S.after?'o':''}">${S.after?'↗ +4 per pusmetį':'Bendrai sveikas'}</div></div>
+    <div class="card"><div class="small" style="font-weight:700;color:var(--ink)">Biologinis amžius</div><div class="big ${S.after?'o':''}">${ba}<span class="small"> /${AGE}</span></div><div class="small ${S.after?'o':'x'}">${S.after?'3 m. jaunesnis':'3 m. vyresnis'}</div></div>
+  </div>
+  <h2>Šiandien · ${done}/3</h2>
+  ${todoList()}
+  <h2>Ką tvarkome</h2>
+  <button class="prio" data-go="plan" style="background:#FCEDEB"><b style="color:var(--accent)">1</b><span style="font-weight:600">Širdies ir kraujagyslių sveikata</span></button>
+  <div style="height:10px"></div>
+  <button class="card row" data-act="upload" style="width:100%;text-align:left"><span style="font-size:26px">📄</span><div><b>Įkelk senus tyrimus</b><div class="small">Nufotografuok blanką – DI atpažins rodiklius</div></div></button>
+  </div>`;
+}
+function todoList(){
+  const T=[["omega","Omega-3 EPA/DHA","su pusryčiais"],["d3","Vitaminas D3 + K2","su riebiu maistu"],["run","30 min. ramaus bėgimo","2 pulso zona"]];
+  return `<div class="card list">${T.map(([k,a,b])=>`<button class="item" data-act="todo:${k}"><div class="row"><span class="check ${S.todo[k]?'on':''}"></span><div><b style="font-size:14px;${S.todo[k]?'color:var(--mute)':''}">${a}</b><div class="small">${b}</div></div></div></button>`).join("")}</div>`;
+}
+function vResults(){
+  const ms=markers(), c=counts(ms);
+  const F={all:"Visi",x:"Už ribų",n:"Normalūs",o:"Optimalūs"};
+  const shown = ms.filter(m=>S.filter==="all"||m.st===S.filter);
+  const cats = Object.keys(CATS).filter(k=>shown.some(m=>m.cat===k));
+  return `<div class="fade">
+  <div class="between" style="margin:4px 0 12px"><h1>Rezultatai</h1><button class="chip" data-act="upload">+ Įkelti</button></div>
+  <div class="card">
+    <div class="row" style="gap:18px;margin-bottom:12px">${[[ms.length,"Iš viso",""],[c.o,"Optimalūs","o"],[c.n,"Normalūs","n"],[c.x,"Už ribų","x"]].map(([v,l,k])=>`<div><div style="font-size:26px;font-weight:700" class="${k}">${v}</div><div class="small">${l}</div></div>`).join("")}</div>
+    ${seg(c,ms.length)}
+    <div class="small" style="margin-top:10px">Kraujo tyrimas · ${S.after?'2027 m. gegužės 20 d.':'2026 m. lapkričio 6 d.'}</div>
+  </div>
+  <div class="chips" style="margin:14px 0 6px">${Object.entries(F).map(([k,l])=>`<button class="chip ${S.filter===k?'on':''}" data-act="filter:${k}">${l}${k!=='all'?` · ${c[k]}`:''}</button>`).join("")}</div>
+  <div class="stack" style="margin-top:8px">${cats.map(k=>{
+    const all=ms.filter(m=>m.cat===k), list=shown.filter(m=>m.cat===k), [g,gc]=grade(all), open=S.openCats[k]||S.filter!=="all";
+    return `<div class="card" style="padding:4px 14px">
+      <button class="between" data-act="cat:${k}" style="width:100%;padding:12px 0"><div class="row" style="gap:10px"><span class="grade ${gc}">${g}</span><b style="font-size:15px">${CATS[k][0]}</b></div><span class="small">${all.length} ${open?'▴':'▾'}</span></button>
+      ${open?`<div class="list" style="border-top:1px solid var(--line)">${list.map(m=>`<button class="item" data-mk="${esc(m.name)}"><span style="font-size:14px;font-weight:600">${m.name}</span><span class="row" style="gap:10px"><span class="pill ${m.st}">${stWord(m)}</span><span class="val">${fmtN(m.v)} <span class="small">${m.unit}</span></span></span></button>`).join("")}</div>`:""}
+    </div>`;}).join("")}</div>
+  </div>`;
+}
+function rangeBar(m){
+  const lo=Math.min(m.rl, m.v)*0.85, hi=Math.max(m.rh, m.v)*1.12 || 1;
+  const p=(x)=>((x-lo)/(hi-lo))*100;
+  return `<div style="position:relative;height:56px;margin-top:8px">
+    <div style="position:absolute;top:22px;left:0;right:0;height:12px;border-radius:9px;background:#F1DCE8"></div>
+    <div style="position:absolute;top:22px;left:${p(m.rl)}%;width:${p(m.rh)-p(m.rl)}%;height:12px;background:#F4E7BE;border-radius:9px"></div>
+    <div style="position:absolute;top:22px;left:${p(m.ol)}%;width:${p(m.oh)-p(m.ol)}%;height:12px;background:#BFE8D0;border-radius:9px"></div>
+    <div style="position:absolute;top:14px;left:calc(${p(m.v)}% - 14px);width:28px;height:28px;border-radius:99px;background:#fff;border:6px solid var(--${m.st==='o'?'good':m.st==='n'?'warn':'bad'});box-shadow:0 3px 8px rgba(0,0,0,.15)"></div>
+    <div class="small" style="position:absolute;top:40px;left:${p(m.rl)}%;translate:-50% 0">${fmtN(m.rl)}</div>
+    <div class="small" style="position:absolute;top:40px;left:${p(m.rh)}%;translate:-50% 0">${fmtN(m.rh)}</div>
+  </div>`;
+}
+function histChart(m){
+  if (m.hist.length<2) return `<div class="small">Istorijos dar nėra. Įkelk senus tyrimus arba palauk pakartotinio tyrimo.</div>`;
+  const W=300,H=120, vs=m.hist.map(h=>h.v), mn=Math.min(...vs,m.ol)*0.9, mx=Math.max(...vs,m.oh)*1.08;
+  const x=(i)=>20+i*((W-40)/(m.hist.length-1)), y=(v)=>H-15-((v-mn)/(mx-mn))*(H-35);
+  const pts=m.hist.map((h,i)=>`${x(i)},${y(h.v)}`).join(" ");
+  const col=(v)=>{const s=(v<m.rl||v>m.rh)?'bad':(v<m.ol||v>m.oh)?'warn':'good';return `var(--${s})`};
+  return `<svg width="100%" viewBox="0 0 ${W} ${H}" role="img" aria-label="${m.name} istorija">
+    <rect x="0" y="${y(m.oh)}" width="${W}" height="${Math.max(0,y(m.ol)-y(m.oh))}" fill="#E3F4EA"/>
+    <polygon points="${x(0)},${H-15} ${pts} ${x(m.hist.length-1)},${H-15}" fill="rgba(255,74,47,.07)"/>
+    <polyline points="${pts}" fill="none" stroke="var(--ink)" stroke-width="2.5"/>
+    ${m.hist.map((h,i)=>`<circle cx="${x(i)}" cy="${y(h.v)}" r="${i===m.hist.length-1?7:5}" fill="${col(h.v)}" stroke="#fff" stroke-width="2"/><text x="${x(i)}" y="${y(h.v)-12}" font-size="12" font-weight="700" text-anchor="middle" fill="var(--ink)" font-family="Manrope">${fmtN(h.v)}</text><text x="${x(i)}" y="${H-1}" font-size="10.5" text-anchor="middle" fill="var(--mute)" font-family="Manrope">${h.d}</text>`).join("")}
+  </svg>`;
+}
+function vMarker(){
+  const m = markers().find(x=>x.name===S.marker); if(!m) return vResults();
+  const cat=CATS[m.cat][1];
+  const act = (m.st!=="o") ? (ACTION[m.cat==="sirdis"?"sirdis":cat] || ACTION.thy) : "Rodiklis optimalioje zonoje – nieko keisti nereikia. Pasitikrinsime per kitą tyrimą.";
+  return `<div class="fade">
+  <button class="back" data-go="${S.prevScreen}">← ${S.prevScreen==='results'?'Rezultatai':'Atgal'}</button>
+  <div class="small" style="font-weight:700">${CATS[m.cat][0]}</div>
+  <h1 style="margin-top:2px">${m.name}</h1>
+  <div class="card" style="margin-top:14px">
+    <div class="between"><div class="big">${fmtN(m.v)} <span class="small">${m.unit}</span></div><span class="pill ${m.st}" style="font-size:15px">${stWord(m)}</span></div>
+    ${rangeBar(m)}
+    <div class="row small" style="gap:14px;margin-top:6px"><span><span class="o">■</span> Optimalu ${fmtN(m.ol)}–${fmtN(m.oh)}</span><span><span class="n">■</span> Norma ${fmtN(m.rl)}–${fmtN(m.rh)}</span></div>
+  </div>
+  <h2>Istorija</h2><div class="card">${histChart(m)}</div>
+  <h2>Ką tai reiškia</h2><div class="card" style="font-size:14.5px;line-height:1.55">${EXPLAIN[m.name]||`${m.name} – ${CATS[m.cat][0].toLowerCase()} rodiklis. Tavo reikšmė ${m.st==='o'?'yra optimalioje zonoje.':m.st==='n'?'normos ribose, bet ne optimali.':'už normos ribų.'}`}</div>
+  <h2>Ką daryti</h2><div class="card" style="font-size:14.5px;line-height:1.55">${act}${m.st!=='o'?`<div style="margin-top:12px"><button class="chip" data-go="plan">Atidaryti planą →</button></div>`:""}</div>
+  <div style="height:14px"></div>
+  <button class="btn" data-ask="Ką reiškia mano ${esc(m.name)} ${fmtN(m.v)} ${esc(m.unit)} ir ką turėčiau daryti?">Klausti asistento apie ${esc(m.name)}</button>
+  </div>`;
+}
+const PRIOS = [
+  {n:"1",t:"Širdies ir kraujagyslių sveikata",c:"var(--accent)",bg:"#FCEDEB",mk:["ApoB","MTL cholesterolis","Ne-DTL cholesterolis","Trigliceridai"],a:["30 min. ramaus bėgimo 5× per savaitę","Riebi žuvis 2× per savaitę","Daugiau skaidulų: avižos, ankštiniai","Pakartotinis ApoB po 3 mėn."]},
+  {n:"2",t:"Medžiagų apykaita",c:"var(--accent2)",bg:"#FCF0E7",mk:["Gliukozė","Homocisteinas"],a:["10 min. pasivaikščiojimas po valgio","Mažiau saldžių gėrimų","B grupės vitaminai su maistu"]},
+  {n:"3",t:"Vitamino D ir omega-3 trūkumas",c:"var(--blue)",bg:"#EBF1FC",mk:["Vitaminas D","Omega-3 indeksas","AA/EPA santykis"],a:["Vitaminas D3 + K2 kasdien","Omega-3 EPA/DHA kasdien","Pasitikrinsime po 3 mėn."]}
+];
+function vPlan(){
+  return `<div class="fade">
+  <h1 style="margin-top:4px">Tavo planas</h1>
+  <div class="card row" style="margin-top:12px;background:#E9F6EE"><span class="check on"></span><div><b style="font-size:14px">Patikrino GALIA gydytojas</b><div class="small">Lapkričio 12 d. · remiantis 84 rodikliais</div></div></div>
+  <h2>Šiandien</h2>${todoList()}
+  <h2>Ką tvarkome</h2>
+  <div class="stack">${PRIOS.map((p,i)=>`<div>
+    <button class="prio" data-act="prio:${i}" style="background:${p.bg}"><b style="color:${p.c}">${p.n}</b><span style="font-weight:600;flex:1">${p.t}</span><span class="small">${S.openPrio===i?'▴':'▾'}</span></button>
+    ${S.openPrio===i?`<div class="card" style="margin-top:6px"><div class="small" style="font-weight:700;margin-bottom:6px">Veiksmai</div>${p.a.map(a=>`<div style="font-size:14px;padding:5px 0">• ${a}</div>`).join("")}
+      <div class="small" style="font-weight:700;margin:10px 0 6px">Susiję rodikliai</div><div class="chips" style="flex-wrap:wrap">${p.mk.map(n=>`<button class="chip" data-mk="${esc(n)}">${n}</button>`).join("")}</div></div>`:""}
+  </div>`).join("")}</div>
+  <h2>Kitas žingsnis</h2>
+  <div class="card between"><div><b>Pakartotinis tyrimas</b><div class="small">2027 m. gegužė · priminsime</div></div><span style="font-size:24px">🩸</span></div>
+  <div style="height:12px"></div>
+  <button class="btn ghost" data-act="doctor">Pasikalbėti su gydytoju</button>
+  </div>`;
+}
+const SUGG = ["Kodėl man padidėjęs ApoB?","Ar galiu bėgioti su aukštu ApoB?","Kiek vitamino D vartoti žiemą?","Ką valgyti pusryčiams?"];
+function vChat(){
+  return `<div class="fade" style="display:flex;flex-direction:column;gap:10px;min-height:100%">
+  <div class="row" style="padding:2px 0 10px;border-bottom:1px solid var(--line)">${LOGO(40)}<div><b>GALIA asistentas</b><div class="small o" style="font-weight:600">● mato tavo 84 rodiklius</div></div></div>
+  ${S.chat.map(m=>`<div class="bubble ${m.r==='me'?'me':'ai'}">${esc(m.t)}</div>`).join("")}
+  ${S.busy?`<div class="bubble ai"><span class="spin" style="width:16px;height:16px;border-width:2.5px"></span></div>`:""}
+  ${S.chat.length<3&&!S.busy?`<div class="chips" style="flex-wrap:wrap;margin-top:4px">${SUGG.map(s=>`<button class="chip" data-ask="${esc(s)}">${s}</button>`).join("")}</div>`:""}
+  <div class="small" style="margin-top:auto;text-align:center;padding-top:8px">Asistentas nediagnozuoja. Sudėtingais atvejais – <button data-act="doctor" style="text-decoration:underline;font-size:13px;color:var(--mute)">gydytojas</button>.</div>
+  <div id="chatEnd"></div>
+  </div>`;
+}
+function vProfile(){
+  const W=[["apple","Apple Health"],["oura","Oura"],["whoop","Whoop"],["garmin","Garmin"]];
+  const any=Object.values(S.wear).some(Boolean);
+  return `<div class="fade">
+  <div class="row" style="margin:6px 0 16px"><div style="width:58px;height:58px;border-radius:99px;background:#E7DFD4;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:22px">T</div><div><h1 style="font-size:24px">Tomas</h1><div class="small">41 m. · Vilnius</div></div></div>
+  <div class="card between"><div><b>${S.plan==='genome'?'Kraujas + genomas':'Tik narystė'}</b><div class="small">Galioja iki 2027-11-13</div></div><b>${S.plan==='genome'?'249 €':'149 €'}/m.</b></div>
+  <h2>Įrenginiai</h2>
+  <div class="card list">${W.map(([k,l])=>`<div class="item"><b style="font-size:14px">${l}</b><button class="toggle ${S.wear[k]?'on':''}" data-act="wear:${k}" aria-label="${l}"></button></div>`).join("")}</div>
+  ${any?`<div class="card" style="margin-top:10px;font-size:14px;line-height:1.5"><b>Įrenginių duomenys</b><div style="margin-top:6px">Vidutinis HRV – <b>52 ms</b>, ramybės pulsas – <b>56</b>. Atsigavimas geras, širdies ištvermė gera.</div></div>`:""}
+  <h2>Duomenys</h2>
+  <div class="card list">
+    <button class="item" data-act="upload"><b style="font-size:14px">Įkelti senus tyrimus</b><span class="small">${S.uploaded?'1 įkeltas':'→'}</span></button>
+    <div class="item"><b style="font-size:14px">Kalba</b><span class="chips">${["LT","EN","RU"].map(l=>`<button class="chip ${S.lang===l?'on':''}" data-act="lang:${l}" style="padding:6px 10px">${l}</button>`).join("")}</span></div>
+    <div class="item"><b style="font-size:14px">Duomenų sauga</b><span class="small">ES serveriai · BDAR</span></div>
+  </div>
+  <h2>Darbdaviams</h2>
+  <div class="card" style="font-size:14px;line-height:1.5">GALIA narystė kaip darbuotojų naudos dalis. Darbdavys mato tik anoniminę suvestinę.</div>
+  </div>`;
+}
+
+// ---------------- modal ----------------
+function mUpload(){
+  const u=S.upload;
+  let body="";
+  if (u.state==="idle") body=`<label class="drop" for="file"><div style="font-size:34px">📷</div><b>Nufotografuok arba pasirink blanko nuotrauką</b><div class="small" style="margin-top:4px">JPG arba PNG, bet kurios laboratorijos</div></label><input id="file" type="file" accept="image/*" style="display:none">
+    <div style="height:10px"></div><button class="btn ghost" data-act="demoUpload">Naudoti pavyzdinį 2025 m. tyrimą</button>`;
+  else if (u.state==="busy") body=`<div style="text-align:center;padding:30px"><span class="spin"></span><div style="margin-top:12px;font-weight:700">DI atpažįsta rodiklius…</div></div>`;
+  else if (u.state==="err") body=`<div class="card" style="font-size:14px">${esc(u.msg)}</div><div style="height:10px"></div><button class="btn ghost" data-act="demoUpload">Naudoti pavyzdinį tyrimą</button>`;
+  else body=`<div class="card list">${u.rows.map(r=>`<div class="item"><span style="font-size:14px;font-weight:600">${esc(r.name)}</span><span class="val">${esc(fmtN(r.value))} <span class="small">${esc(r.unit||"")}</span></span></div>`).join("")}</div>
+    <div class="small" style="margin:10px 0">Atpažinta ${u.rows.length} rodiklių${u.date?` · ${esc(u.date)}`:""}. Pridėta į istoriją.</div>
+    <button class="btn" data-act="closeUpload">Peržiūrėti istoriją</button>`;
+  return `<div class="modal" data-act="closeModal"><div class="sheet fade" data-stop="1"><div class="between" style="margin-bottom:14px"><h2 style="margin:0">Senų tyrimų įkėlimas</h2><button data-act="closeModal" aria-label="Uždaryti" style="font-size:22px">×</button></div>${body}</div></div>`;
+}
+function mDoctor(){
+  return `<div class="modal" data-act="closeModal"><div class="sheet fade" data-stop="1"><h2 style="margin:0 0 6px">Pasikalbėti su gydytoju</h2><div class="small">GALIA gydytojas mato tavo rezultatus ir planą.</div>
+  <div class="stack" style="margin-top:14px"><button class="card between" data-act="docok"><b>Rašyti žinutę</b><span class="small">atsako per 24 val.</span></button><button class="card between" data-act="docok"><b>Vaizdo konsultacija</b><span class="small">rytoj, 18:00</span></button></div></div></div>`;
+}
+
+// ---------------- render ----------------
+const TABS=[["home","Pradžia"],["results","Rezultatai"],["plan","Planas"],["chat","Asistentas"],["profile","Profilis"]];
+function render(keepScroll){
+  const v=$("#view"), st=v.scrollTop;
+  const map={offer:vOffer,book:vBook,booked:vBooked,home:vHome,results:vResults,marker:vMarker,plan:vPlan,chat:vChat,profile:vProfile};
+  v.innerHTML=(map[S.screen]||vOffer)();
+  const tabbed=S.ready && !["offer","book","booked"].includes(S.screen);
+  $("#tabs").style.display=tabbed?"flex":"none";
+  const active = S.screen==="marker" ? "results" : S.screen;
+  $("#tabs").innerHTML=TABS.map(([k,l])=>`<button class="tab ${active===k?'on':''}" data-go="${k}">${ICON[k]}<span>${l}</span></button>`).join("");
+  $("#composerSlot").innerHTML = S.screen==="chat" ? `<form class="composer" id="cform"><label for="cin" class="small" style="position:absolute;left:-999px">Klausimas</label><input id="cin" autocomplete="off" placeholder="Klausk apie savo rezultatus…"><button class="send" aria-label="Siųsti">↑</button></form>` : "";
+  $("#modalSlot").innerHTML = S.modal==="upload"?mUpload():S.modal==="doctor"?mDoctor():"";
+  if (keepScroll) v.scrollTop=st; else if (S.screen==="chat") { v.scrollTop=v.scrollHeight; } else v.scrollTop=0;
+  const f=$("#file"); if (f) f.onchange=(e)=>{ if (e.target.files[0]) readUpload(e.target.files[0]); };
+  const cf=$("#cform"); if (cf) cf.onsubmit=(e)=>{ e.preventDefault(); const q=$("#cin").value.trim(); if(q) ask(q); };
+  renderGuide();
+  $("#afterToggle").classList.toggle("on",S.after);
+}
+function go(s){ if (s==="marker") return; S.screen=s; S.modal=null; try{ history.replaceState(null,"","#"+s);}catch(e){} render(); }
+
+let pushT;
+function push(title,body){
+  const p=$("#push"); p.innerHTML=`${LOGO(42)}<div style="flex:1"><b style="font-size:14px">${title}</b><div class="small" style="color:#555">${body}</div></div><span class="small">dabar</span>`;
+  p.classList.add("show"); clearTimeout(pushT); pushT=setTimeout(()=>p.classList.remove("show"),3800);
+}
+
+// ---------------- AI ----------------
+let _sp=null;
+function getSample(){ if(!_sp && window.claude && window.claude.use) _sp=window.claude.use("sample").catch(()=>null); return _sp||Promise.resolve(null); }
+getSample();
+function context(){
+  const ms=markers();
+  const flag=ms.filter(m=>m.st!=="o").map(m=>`${m.name} ${m.v} ${m.unit} (${stWord(m)}; optimalu ${m.ol}–${m.oh}, norma ${m.rl}–${m.rh})`).join("; ");
+  return `Tu esi GALIA – prevencinės sveikatos programėlės Lietuvoje – DI asistentas. Atsakyk ta kalba, kuria klausia vartotojas (numatyta lietuvių), trumpai: 2–5 sakiniai, paprastai, šiltai, be markdown. Nediagnozuok ir neskirk receptinių vaistų ar konkrečių dozių; kai reikia, siūlyk pasikalbėti su GALIA gydytoju.
+Vartotojas: Tomas, 41 m., vyras, bėgioja. Kraujo tyrimas: 84 rodikliai. Ne optimalūs: ${flag}. Visi kiti optimalūs. GALIA balas ${S.after?91:87}/100, biologinis amžius ${S.after?38:44}.
+Gydytojo patvirtintas planas: 1) širdis – 30 min. ramaus bėgimo 5×/sav., riebi žuvis 2×/sav., skaidulos; 2) medžiagų apykaita – pasivaikščiojimas po valgio; 3) vitaminas D3+K2 ir omega-3 kasdien. Pakartotinis tyrimas po 3–6 mėn.`;
+}
+const CANNED = [
+  [/apob|apo b/i,"ApoB rodo, kiek kraujyje yra dalelių, kurios gali kauptis kraujagyslėse. Tavo 92 mg/dL yra šiek tiek virš normos, todėl tai 1 prioritetas plane: daugiau judėjimo, skaidulų ir riebios žuvies. Po 3 mėnesių pasitikrinsime – jei nemažės, aptarsi tolesnius žingsnius su GALIA gydytoju."],
+  [/bėg|sport|treni/i,"Taip, bėgioti gali ir net verta – ramus aerobinis krūvis padeda gerinti cholesterolio rodiklius. Laikykis 2 pulso zonos (gali kalbėti bėgdamas) ir neperspausk. Jei atsirastų spaudimas krūtinėje ar dusulys, sustok ir susisiek su gydytoju."],
+  [/vitamin|d3/i,"Tavo vitaminas D – 21 ng/mL, o optimalu 40–70. Gydytojas plane jau patvirtino D3 + K2 kasdien su riebiu maistu. Po 3 mėnesių pasitikrinsime, ar pasiekei optimalią zoną."],
+  [/pusry|valg|mityb/i,"Pusryčiams tinka avižinė košė su uogomis ir riešutais, kiaušiniai su daržovėmis arba graikiškas jogurtas su sėklomis. Skaidulos padeda mažinti MTL cholesterolį, o baltymai ilgiau palaiko sotumą."]
+];
+async function ask(q){
+  if (S.busy) return;
+  S.screen="chat"; S.modal=null; S.chat.push({r:"me",t:q}); S.busy=true; render();
+  let answer=null;
+  try{
+    const sample = await getSample();
+    if (sample){
+      const convo = S.chat.map(m=>(m.r==="me"?"Vartotojas: ":"Asistentas: ")+m.t).join("\n");
+      const res = await sample(`${context()}\n\nPokalbis:\n${convo}\n\nParašyk tik kitą asistento atsakymą.`, {modelTier:"quick", cache:false});
+      answer = (res && res.text || "").trim() || null;
+    }
+  }catch(e){ answer=null; }
+  if (!answer){ const c=CANNED.find(([r])=>r.test(q)); answer = c?c[1]:"Geras klausimas. Pagal tavo rezultatus svarbiausia dabar – širdies ir kraujagyslių rodikliai (ApoB ir MTL) bei vitaminas D. Jei nori, galiu paaiškinti bet kurį rodiklį arba sujungti tave su GALIA gydytoju."; }
+  S.busy=false; S.chat.push({r:"ai",t:answer}); render();
+}
+const DEMO_ROWS=[{name:"ApoB",value:88,unit:"mg/dL"},{name:"MTL cholesterolis",value:104,unit:"mg/dL"},{name:"Bendras cholesterolis",value:188,unit:"mg/dL"},{name:"Trigliceridai",value:120,unit:"mg/dL"},{name:"Gliukozė",value:94,unit:"mg/dL"},{name:"Vitaminas D",value:24,unit:"ng/mL"},{name:"Ne-DTL cholesterolis",value:125,unit:"mg/dL"}];
+async function readUpload(file){
+  S.upload={state:"busy",rows:[]}; render(true);
+  try{
+    const sample = await getSample();
+    if (!sample) throw new Error("no");
+    const lim = sample.limits ? await sample.limits() : {images:true};
+    if (!lim.images) throw new Error("no");
+    const out = await sample.json(`Nuotraukoje – kraujo tyrimų blankas. Ištrauk visus rodiklius. Grąžink tik JSON: {"date":"YYYY-MM-DD arba null","rows":[{"name":"rodiklio pavadinimas lietuviškai","value":skaičius,"unit":"vienetai"}]}. Jei tai ne tyrimų blankas, grąžink {"date":null,"rows":[]}.`, {images:[file]});
+    const rows=(out&&out.rows||[]).filter(r=>r&&r.name&&r.value!=null).slice(0,40);
+    if (!rows.length){ S.upload={state:"err",msg:"Nuotraukoje neradome tyrimų rodiklių. Pabandyk ryškesnę blanko nuotrauką.",rows:[]}; }
+    else { S.upload={state:"done",rows,date:out.date}; S.uploaded=true; }
+  }catch(e){
+    S.upload={state:"err",msg:"Šiame peržiūros režime DI atpažinimas nepasiekiamas. Gali išbandyti su pavyzdiniu tyrimu.",rows:[]};
+  }
+  render(true);
+}
+
+// ---------------- guide ----------------
+const STEPS=[
+ ["offer","Pasiūlymas","149 € vietoj 3 000 €, du planai"],["book","Registracija","Laboratorija, data, laikas"],
+ ["home","Rezultatai paruošti","Pranešimas, balas, biologinis amžius"],["results","84 rodikliai","Filtrai, sistemų įvertinimai"],
+ ["apob","ApoB detalės","Norma, istorija, ką daryti"],["plan","Gydytojo planas","Prioritetai ir šiandienos veiksmai"],
+ ["chat","DI asistentas","Tikri atsakymai lietuviškai"],["upload","Senų tyrimų įkėlimas","DI atpažįsta blanką"],["profile","Profilis","Įrenginiai, darbdaviams"]
+];
+function renderGuide(){
+  const cur = S.modal==="upload"?"upload":S.screen==="marker"?"apob":S.screen==="booked"?"book":S.screen;
+  $("#guideSteps").innerHTML=STEPS.map(([k,a,b],i)=>`<button class="gstep ${cur===k?'on':''}" data-guide="${k}"><span class="n">${i+1}</span><span><b>${a}</b><span>${b}</span></span></button>`).join("");
+}
+function guide(k){
+  if (["home","results","plan","chat","profile","apob","upload"].includes(k) && !S.ready) S.ready=true;
+  if (k==="apob"){ S.marker="ApoB"; S.prevScreen="results"; S.screen="marker"; S.modal=null; render(); return; }
+  if (k==="upload"){ if(!["home","results","profile"].includes(S.screen)) S.screen="results"; S.upload={state:"idle",rows:[]}; S.modal="upload"; render(); return; }
+  go(k);
+  if (k==="home") setTimeout(()=>push("Tavo rezultatai paruošti","84 rodikliai, 73 optimalūs"),300);
+}
+
+// ---------------- events ----------------
+document.addEventListener("click",(e)=>{
+  const t=e.target.closest("[data-go],[data-act],[data-mk],[data-ask],[data-guide],[data-stop]");
+  if (!t) return;
+  if (t.dataset.stop && !e.target.closest("[data-act],[data-go],[data-mk],[data-ask]")) return;
+  if (t.dataset.guide) return guide(t.dataset.guide);
+  if (t.dataset.go) { if (t.dataset.go==="booked") { go("booked"); return; } return go(t.dataset.go); }
+  if (t.dataset.mk) { S.prevScreen = S.screen==="marker"?S.prevScreen:S.screen; S.marker=t.dataset.mk; S.screen="marker"; S.modal=null; return render(); }
+  if (t.dataset.ask) return ask(t.dataset.ask);
+  const [a,v]=t.dataset.act.split(":");
+  switch(a){
+    case "plan": S.plan=v; render(true); break;
+    case "lab": S.lab=+v; render(true); break;
+    case "day": S.day=+v; render(true); break;
+    case "slot": S.slot=v+":"+t.dataset.act.split(":")[2]; render(true); break;
+    case "ready": S.ready=true; go("home"); setTimeout(()=>push("Tavo rezultatai paruošti","84 rodikliai, 73 optimalūs"),400); setTimeout(()=>push("Tavo planas paruoštas","Patikrino gydytojas. 2 veiksmai šiandien"),5200); break;
+    case "filter": S.filter=v; render(true); break;
+    case "cat": S.openCats[v]=!S.openCats[v]; render(true); break;
+    case "todo": S.todo[v]=!S.todo[v]; try{localStorage.setItem("galia_todo",JSON.stringify(S.todo));}catch(err){} render(true); if (Object.values(S.todo).every(Boolean)) push("Visi šiandienos veiksmai atlikti","Puiku, Tomai! Taip ir toliau."); break;
+    case "prio": S.openPrio = S.openPrio===+v?-1:+v; render(true); break;
+    case "wear": S.wear[v]=!S.wear[v]; render(true); break;
+    case "lang": S.lang=v; render(true); break;
+    case "upload": S.upload={state:"idle",rows:[]}; S.modal="upload"; render(true); break;
+    case "demoUpload": S.upload={state:"busy",rows:[]}; render(true); setTimeout(()=>{ S.upload={state:"done",rows:DEMO_ROWS,date:"2025-11-04"}; S.uploaded=true; render(true); },1400); break;
+    case "closeUpload": S.modal=null; S.marker="ApoB"; S.prevScreen="results"; S.screen="marker"; render(); break;
+    case "closeModal": if (e.target===t || t.tagName==="BUTTON") { S.modal=null; render(true); } break;
+    case "doctor": S.modal="doctor"; render(true); break;
+    case "docok": S.modal=null; render(true); push("Užklausa gydytojui išsiųsta","Atsakymas – per 24 val."); break;
+  }
+});
+$("#afterToggle").addEventListener("click",()=>{ S.after=!S.after; if(!S.ready){S.ready=true; S.screen="home";} render(true); if (S.after) push("Pakartotinio tyrimo rezultatai","GALIA balas 87 → 91"); });
+(function init(){ const h=location.hash.replace("#",""); if (["offer","book","home","results","plan","chat","profile"].includes(h)){ if(h!=="offer"&&h!=="book") S.ready=true; S.screen=h; } render(); })();

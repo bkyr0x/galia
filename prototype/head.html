@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GALIA prototipas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* GALIA: warm clinical light UI, one red→orange "pulse" accent, semantic green/amber/magenta for marker status. Layout: phone app centered, demo guide on the side. */
+  --bg:#EDE8E1; --surface:#F7F5F2; --card:#FFFFFF; --ink:#15171C; --mute:#7C7F88; --line:#E9E5DF;
+  --accent:#FF4A2F; --accent2:#FF8A3D; --good:#2FB36F; --warn:#D9A520; --bad:#D9479E; --blue:#4F7FE6;
+  --font:"Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);font-family:var(--font);color:var(--ink);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible,input:focus-visible,label:focus-visible{outline:3px solid var(--accent2);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+.stage{min-height:100%;display:flex;align-items:center;justify-content:center;gap:48px;padding:28px 16px}
+.device{width:400px;height:840px;border-radius:58px;background:#111;padding:12px;box-shadow:0 50px 120px rgba(40,30,20,.28),inset 0 0 0 2px #333;position:relative;flex:none}
+.screen{width:100%;height:100%;border-radius:47px;background:var(--surface);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.island{position:absolute;top:11px;left:50%;translate:-50% 0;width:118px;height:34px;border-radius:20px;background:#000;z-index:30}
+.status{height:52px;flex:none;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 6px;font-weight:700;font-size:15px}
+.view{flex:1;overflow-y:auto;overflow-x:hidden;padding:6px 18px 24px;scrollbar-width:none}
+.view::-webkit-scrollbar{display:none}
+.tabs{flex:none;display:flex;justify-content:space-around;padding:8px 6px 22px;background:rgba(255,255,255,.92);border-top:1px solid var(--line)}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:600;color:var(--mute);padding:4px 6px;border-radius:12px;min-width:62px}
+.tab svg{width:24px;height:24px}
+.tab.on{color:var(--ink)}
+.tab.on svg{color:var(--accent)}
+h1{font-size:28px;font-weight:800;letter-spacing:-.6px;line-height:1.1;text-wrap:balance}
+h2{font-size:19px;font-weight:800;letter-spacing:-.3px;margin:22px 0 10px}
+.sub{color:var(--mute);font-size:14px;margin-top:4px}
+.card{background:var(--card);border-radius:22px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 6px 18px rgba(30,20,10,.05)}
+.stack{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;align-items:center;gap:12px}
+.between{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.big{font-size:40px;font-weight:700;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.small{font-size:13px;color:var(--mute)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:13px;white-space:nowrap}
+.pill::before{content:"";width:8px;height:8px;border-radius:9px;background:currentColor}
+.o{color:var(--good)} .n{color:var(--warn)} .x{color:var(--bad)}
+.btn{display:block;width:100%;text-align:center;background:var(--ink);color:#fff;border-radius:99px;padding:16px;font-weight:700;font-size:16px}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--ink)}
+.btn.grad{background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.chip{border:1.5px solid var(--line);background:var(--card);border-radius:99px;padding:9px 14px;font-weight:700;font-size:13px;white-space:nowrap}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.seg{display:flex;gap:4px;height:10px}
+.seg span{border-radius:9px}
+.list .item{display:flex;align-items:center;justify-content:space-between;padding:13px 4px;border-top:1px solid var(--line);gap:10px;width:100%;text-align:left}
+.list .item:first-child{border-top:0}
+.val{font-variant-numeric:tabular-nums;font-weight:700;font-size:14px;white-space:nowrap}
+.back{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:14px;color:var(--mute);margin:4px 0 10px}
+.grade{width:26px;height:26px;border-radius:99px;border:2px solid currentColor;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex:none}
+.prio{display:flex;align-items:center;gap:14px;border-radius:18px;padding:14px 16px;width:100%;text-align:left}
+.prio b{font-size:34px;font-weight:300;width:24px}
+.check{width:26px;height:26px;border-radius:99px;border:2px solid #CFCAC3;flex:none;display:flex;align-items:center;justify-content:center}
+.check.on{background:var(--good);border-color:var(--good)}
+.check.on::after{content:"";width:9px;height:5px;border:2.5px solid #fff;border-top:0;border-right:0;rotate:-45deg;margin-top:-2px}
+.push{position:absolute;top:50px;left:10px;right:10px;z-index:40;background:rgba(255,255,255,.97);border-radius:22px;padding:13px 14px;display:flex;gap:12px;align-items:center;box-shadow:0 16px 40px rgba(0,0,0,.18);translate:0 -160px;transition:translate .5s cubic-bezier(.16,1,.3,1)}
+.push.show{translate:0 0}
+.bubble{max-width:84%;padding:12px 14px;border-radius:20px;font-size:14.5px;line-height:1.45;white-space:pre-wrap}
+.bubble.me{align-self:flex-end;background:var(--ink);color:#fff;border-bottom-right-radius:6px}
+.bubble.ai{align-self:flex-start;background:var(--card);border-bottom-left-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.05)}
+.composer{display:flex;gap:8px;padding:10px 14px;background:var(--surface);border-top:1px solid var(--line)}
+.composer input{flex:1;border:1.5px solid var(--line);border-radius:99px;padding:12px 16px;font:inherit;font-size:14px;background:var(--card)}
+.send{width:44px;height:44px;border-radius:99px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;display:flex;align-items:center;justify-content:center;flex:none}
+.toggle{width:46px;height:28px;border-radius:99px;background:#D9D4CD;position:relative;flex:none;transition:background .2s}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:99px;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle.on{background:var(--good)}
+.toggle.on::after{left:21px}
+.modal{position:absolute;inset:0;background:rgba(10,10,15,.45);z-index:50;display:flex;align-items:flex-end}
+.sheet{background:var(--surface);width:100%;border-radius:28px 28px 0 0;padding:22px 20px 30px}
+.drop{border:2px dashed #CFC8BF;border-radius:20px;padding:22px;text-align:center;display:block;cursor:pointer;background:var(--card)}
+.spin{width:22px;height:22px;border-radius:99px;border:3px solid #E6DED4;border-top-color:var(--accent);animation:sp 1s linear infinite;display:inline-block}
+@keyframes sp{to{rotate:360deg}}
+.fade{animation:fd .35s ease both}
+@keyframes fd{from{opacity:.0;translate:0 8px}to{opacity:1;translate:0 0}}
+.guide{width:340px;flex:none;display:flex;flex-direction:column;gap:14px}
+.guide .card{padding:18px}
+.gstep{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;padding:10px;border-radius:14px}
+.gstep:hover{background:#F3EFE9}
+.gstep .n{width:26px;height:26px;border-radius:99px;background:var(--ink);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
+.gstep.on .n{background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.gstep b{display:block;font-size:14px}
+.gstep span{font-size:12.5px;color:var(--mute)}
+@media (max-width:1000px){.guide{display:none}}
+@media (max-width:460px){.stage{padding:0}.device{width:100%;height:100vh;height:100dvh;border-radius:0;padding:0;box-shadow:none}.screen{border-radius:0}.island{display:none}}
+</style>
+</head>
